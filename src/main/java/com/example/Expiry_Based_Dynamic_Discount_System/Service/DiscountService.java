@@ -27,39 +27,35 @@ public class DiscountService {
     private DiscountHistoryRepository discountHistoryRepository;
 
     // 🔹 Calculates and applies discount for a product
+//
     public BigDecimal calculateAndApplyDiscount(Product product) {
         BigDecimal discountScore = calculateDiscountScore(product);
         BigDecimal discountPercentage = getDiscountPercentage(discountScore);
 
-        // Correcting discount calculation
         BigDecimal discountAmount = product.getBasePrice()
                 .multiply(discountPercentage)
                 .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
 
         BigDecimal discountedPrice = product.getBasePrice().subtract(discountAmount);
 
-        // Store discount calculation log
-        DiscountCalculationLog log = new DiscountCalculationLog();
-        log.setProduct(product);
-        log.setTotalDiscountScore(discountScore);
-        log.setRecommendedDiscount(discountPercentage);
-        log.setCalculatedAt(LocalDateTime.now());
+        // 🔹 Fetch last discount history entry to avoid redundant writes
+        DiscountHistory lastHistory = discountHistoryRepository.findLatestDiscountByProduct(String.valueOf(product));
 
-        discountCalculationLogRepository.save(log);
+        if (lastHistory == null || lastHistory.getDiscountPercentage().compareTo(discountPercentage) != 0) {
+            DiscountHistory discountHistory = new DiscountHistory();
+            discountHistory.setProduct(product);
+            discountHistory.setDiscountPercentage(discountPercentage);
+            discountHistory.setOriginalPrice(product.getBasePrice());
+            discountHistory.setDiscountedPrice(discountedPrice);
+            discountHistory.setAppliedAt(LocalDateTime.now());
+            discountHistory.setAppliedBy("System");
 
-        // Store discount history
-        DiscountHistory discountHistory = new DiscountHistory();
-        discountHistory.setProduct(product);
-        discountHistory.setDiscountPercentage(discountPercentage);
-        discountHistory.setOriginalPrice(product.getBasePrice());
-        discountHistory.setDiscountedPrice(discountedPrice);
-        discountHistory.setAppliedAt(LocalDateTime.now());
-        discountHistory.setAppliedBy("System");
-
-        discountHistoryRepository.save(discountHistory);
+            discountHistoryRepository.save(discountHistory);
+        }
 
         return discountedPrice;
     }
+
 
     // 🔹 Determines discount score based on product type
     private BigDecimal calculateDiscountScore(Product product) {
