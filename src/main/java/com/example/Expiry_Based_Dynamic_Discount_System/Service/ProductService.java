@@ -1,6 +1,8 @@
 package com.example.Expiry_Based_Dynamic_Discount_System.Service;
 
+import com.example.Expiry_Based_Dynamic_Discount_System.Entity.DiscountHistory;
 import com.example.Expiry_Based_Dynamic_Discount_System.Entity.Product;
+import com.example.Expiry_Based_Dynamic_Discount_System.Repository.DiscountHistoryRepository;
 import com.example.Expiry_Based_Dynamic_Discount_System.Repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,8 @@ public class ProductService {
 
     @Autowired
     private ProductRepository productRepository;
+    @Autowired
+    private DiscountHistoryRepository discountHistoryRepository;
 
     // Create a new product
     public Product addProduct(Product product) {
@@ -56,4 +60,10 @@ public class ProductService {
     public void deleteProduct(String productId) {
         productRepository.deleteById(productId);
     }
+
+    public Optional<DiscountHistory> getLatestDiscount(String productId) {
+        List<DiscountHistory> discountList = discountHistoryRepository.findLatestDiscountByProductId(productId);
+        return discountList.isEmpty() ? Optional.empty() : Optional.of(discountList.get(0));
+    }
+
 }
