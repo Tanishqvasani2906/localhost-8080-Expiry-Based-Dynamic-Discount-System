@@ -18,6 +18,48 @@ const Signup = ({ onClose, onSwitch }) => {
     };
   }, []);
 
+  const handleLogin = async (e, usernameOrEmail, password) => {
+    e.preventDefault();
+
+    if (!usernameOrEmail || !password) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    // Prepare login data
+    const loginData = { usernameOrEmail, password };
+
+    try {
+      // Send login request to backend
+      const response = await axios.post(
+        ${import.meta.env.VITE_BACKEND_URL}/userlogin/login,
+        loginData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Handle successful login
+      if (response.data) {
+        // Store token in localStorage
+        if (response.data.token) {
+          localStorage.setItem("Token", response.data.token);
+          console.log("Token stored in localStorage");
+        }
+        onClose(); // Close modal on successful login
+        // Optionally, store token or handle state changes here
+      } else {
+        setError(response.data.message || "Invalid credentials");
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error("Error during login:", error);
+      setError("Something went wrong. Please try again.");
+    }
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -38,10 +80,10 @@ const Signup = ({ onClose, onSwitch }) => {
 
     try {
       console.log(registerData);
-      
+
       // Send the signup request to the backend
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/userlogin/register`, 
+        ${import.meta.env.VITE_BACKEND_URL}/userlogin/register,
         registerData,
         {
           headers: {
@@ -49,6 +91,8 @@ const Signup = ({ onClose, onSwitch }) => {
           },
         }
       );
+
+      await handleLogin(e, username, password);
 
       // Handle success
       if (response.data) {

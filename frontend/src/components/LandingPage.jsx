@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   Tag,
@@ -8,6 +8,7 @@ import {
   Repeat,
   Snowflake,
 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // Category icons mapping
 const categoryIcons = {
@@ -73,6 +74,9 @@ const initialProducts = [
 const LandingPage = () => {
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Generate categories array from products
   const categories = [
@@ -84,7 +88,30 @@ const LandingPage = () => {
     ),
   ];
 
-  console.log(categories);
+  // Synchronize search query with URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    setSearchQuery(queryParams.get("search") || ""); // Sync the query params with the state
+  }, [location.search]);
+
+  // Filter products based on search query and category
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      selectedCategory === "All" || product.category === selectedCategory;
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery) {
+      navigate(`?search=${searchQuery}`);
+    } else {
+      navigate("/");
+    }
+  };
 
   const calculateDaysToExpiry = (expiryDate) => {
     const today = new Date();
@@ -92,11 +119,6 @@ const LandingPage = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
-
-  const filteredProducts =
-    selectedCategory === "All"
-      ? products
-      : products.filter((product) => product.category === selectedCategory);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -168,10 +190,10 @@ const LandingPage = () => {
                 <div className="flex justify-between items-center mb-3">
                   <div>
                     <span className="line-through text-gray-500 mr-2">
-                      ${product.originalPrice.toFixed(2)}
+                    ₹{product.originalPrice.toFixed(2)}
                     </span>
                     <span className="text-green-600 font-bold text-xl">
-                      ${product.currentPrice.toFixed(2)}
+                    ₹{product.currentPrice.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-center">

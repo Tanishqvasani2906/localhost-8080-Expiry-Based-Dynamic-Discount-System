@@ -39,8 +39,6 @@ const Login = ({ onClose, onSwitch }) => {
 
       // Handle successful login
       if (response.data) {
-        console.log("Login successful:", response.data);
-
         // Store token in localStorage
         if (response.data.token) {
           localStorage.setItem("Token", response.data.token);
