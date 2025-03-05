@@ -1,5 +1,6 @@
 package com.example.Expiry_Based_Dynamic_Discount_System.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -56,6 +57,7 @@ public class Product {
 
     // Relationships with subtype tables
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL)
+
     private PerishableGood perishableGood;
 
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL)

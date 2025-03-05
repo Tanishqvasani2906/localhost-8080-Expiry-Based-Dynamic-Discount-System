@@ -1,5 +1,6 @@
 package com.example.Expiry_Based_Dynamic_Discount_System.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ public class PerishableGood {
 
     @OneToOne
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonIgnore
     private Product product;
 
     @Column(nullable = false)
