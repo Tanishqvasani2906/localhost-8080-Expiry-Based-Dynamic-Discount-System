@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const Signup = ({ onClose, onSwitch }) => {
   const [username, setUsername] = useState("");
@@ -7,6 +8,7 @@ const Signup = ({ onClose, onSwitch }) => {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [error, setError] = useState(""); // To handle error messages
 
   // Prevent background scrolling when the modal is open
   useEffect(() => {
@@ -16,20 +18,51 @@ const Signup = ({ onClose, onSwitch }) => {
     };
   }, []);
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+
+    // Check if passwords match
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
-    console.log("Signing up with:", {
+
+    // Prepare the data to send to the backend
+    const registerData = {
       username,
       password,
       email,
       firstName,
       lastName,
-    });
-    onClose();
+    };
+
+    try {
+      console.log(registerData);
+      
+      // Send the signup request to the backend
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/userlogin/register`, 
+        registerData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Handle success
+      if (response.data) {
+        console.log("Signup successful:", response.data);
+        onClose(); // Close the modal on successful signup
+      } else {
+        // Handle failure
+        setError(response.data.message || "Something went wrong");
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error("Error during signup:", error);
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -47,6 +80,11 @@ const Signup = ({ onClose, onSwitch }) => {
         <p className="text-center text-gray-600 mb-8 italic">
           Waste Less, Save More – Create Your Account Today!
         </p>
+        {error && (
+          <div className="mb-4 text-red-600 text-center">
+            <p>{error}</p>
+          </div>
+        )}
         <form onSubmit={handleSignup} className="space-y-6">
           <div className="flex gap-4">
             <div className="w-1/2">
