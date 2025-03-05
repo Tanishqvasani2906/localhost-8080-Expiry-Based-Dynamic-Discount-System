@@ -40,6 +40,8 @@ public class EventProduct {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal maxTicketPrice;
+    private int maxDays; // Ensure this field exists
+    private LocalDateTime createdAt; // 🔹 Add this field
 
     public int getAvailableSeats() {
         return availableSeats;
@@ -111,5 +113,21 @@ public class EventProduct {
 
     public void setTotalCapacity(int totalCapacity) {
         this.totalCapacity = totalCapacity;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public int getMaxDays() {
+        return maxDays;
+    }
+
+    public void setMaxDays(int maxDays) {
+        this.maxDays = maxDays;
     }
 }

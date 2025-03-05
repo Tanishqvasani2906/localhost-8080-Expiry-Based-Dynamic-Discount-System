@@ -29,22 +29,31 @@ public class DiscountService {
     // 🔹 Calculates and applies discount for a product
 //
     public BigDecimal calculateAndApplyDiscount(Product product) {
-        BigDecimal discountScore = calculateDiscountScore(product);
-        BigDecimal discountPercentage = getDiscountPercentage(discountScore);
+        BigDecimal discountedPrice;
 
-        BigDecimal discountAmount = product.getBasePrice()
-                .multiply(discountPercentage)
-                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+        // ✅ If it's an event product, use event-specific discount logic
+        if (product.getProductCategory() == ProductCategory.EVENT) {
+            discountedPrice = calculateEventDiscount(product);
+        } else {
+            BigDecimal discountScore = calculateDiscountScore(product);
+            BigDecimal discountPercentage = getDiscountPercentage(discountScore);
 
-        BigDecimal discountedPrice = product.getBasePrice().subtract(discountAmount);
+            BigDecimal discountAmount = product.getBasePrice()
+                    .multiply(discountPercentage)
+                    .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
 
-        // 🔹 Fetch last discount history entry to avoid redundant writes
-        DiscountHistory lastHistory = discountHistoryRepository.findLatestDiscountByProduct(String.valueOf(product));
+            discountedPrice = product.getBasePrice().subtract(discountAmount);
+        }
 
-        if (lastHistory == null || lastHistory.getDiscountPercentage().compareTo(discountPercentage) != 0) {
+        // 🔹 Fetch last discount history entry to avoid unnecessary writes
+        DiscountHistory lastHistory = discountHistoryRepository.findLatestDiscountByProduct(product.getProduct_id());
+
+        // 🔹 Ensure we only update if discount changed
+        if (lastHistory == null || lastHistory.getDiscountedPrice().compareTo(discountedPrice) != 0) {
+
             DiscountHistory discountHistory = new DiscountHistory();
             discountHistory.setProduct(product);
-            discountHistory.setDiscountPercentage(discountPercentage);
+            discountHistory.setDiscountPercentage(BigDecimal.ZERO); // Not needed for event-based pricing
             discountHistory.setOriginalPrice(product.getBasePrice());
             discountHistory.setDiscountedPrice(discountedPrice);
             discountHistory.setAppliedAt(LocalDateTime.now());
@@ -53,8 +62,45 @@ public class DiscountService {
             discountHistoryRepository.save(discountHistory);
         }
 
+        // ✅ Debug log to confirm correct price
+        System.out.println("DEBUG: Final Discounted Price Being Saved = " + discountedPrice);
+
         return discountedPrice;
     }
+
+    //    public BigDecimal calculateAndApplyDiscount(Product product) {
+//        BigDecimal discountScore = calculateDiscountScore(product);
+//        BigDecimal discountPercentage = getDiscountPercentage(discountScore);
+//
+//        BigDecimal discountAmount = product.getBasePrice()
+//                .multiply(discountPercentage)
+//                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+//
+//        BigDecimal discountedPrice = product.getBasePrice().subtract(discountAmount);
+//
+//        // 🔹 Fetch last discount history entry using correct product ID to avoid mismatches
+//        DiscountHistory lastHistory = discountHistoryRepository.findLatestDiscountByProduct(product.getProduct_id()); // ✅ FIXED: Used correct product reference
+//
+//        // 🔹 Ensure we only update if there is a change in discount percentage or price
+//        if (lastHistory == null || lastHistory.getDiscountPercentage().compareTo(discountPercentage) != 0
+//                || lastHistory.getDiscountedPrice().compareTo(discountedPrice) != 0) { // ✅ FIXED: Also check price change
+//
+//            DiscountHistory discountHistory = new DiscountHistory();
+//            discountHistory.setProduct(product);
+//            discountHistory.setDiscountPercentage(discountPercentage);
+//            discountHistory.setOriginalPrice(product.getBasePrice());
+//            discountHistory.setDiscountedPrice(discountedPrice); // ✅ Ensure latest price is saved
+//            discountHistory.setAppliedAt(LocalDateTime.now());
+//            discountHistory.setAppliedBy("System");
+//
+//            discountHistoryRepository.save(discountHistory);
+//        }
+//
+//        // ✅ Debug log to confirm the correct price is being saved
+//        System.out.println("DEBUG: Final Discounted Price Being Saved = " + discountedPrice);
+//
+//        return discountedPrice;
+//    }
 
 
     // 🔹 Determines discount score based on product type
@@ -63,7 +109,7 @@ public class DiscountService {
             case PERISHABLE:
                 return calculatePerishableDiscount(product);
             case EVENT:
-                return calculateEventDiscount(product.getEventProduct(), product);
+                return calculateEventDiscount(product);
             case SUBSCRIPTION:
                 return calculateSubscriptionDiscount(product);
             case SEASONAL:
@@ -110,55 +156,57 @@ public class DiscountService {
         return discountScore;
     }
 
-    private BigDecimal calculateEventDiscount(EventProduct event, Product product) {
-        // 1. Calculate Parameters
-        long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), event.getEventDate().toLocalDate());
-        long maxDays = 30; // Assume max 30 days as booking period
+    private BigDecimal calculateEventDiscount(Product product) {
+        // Constants
+        final long EARLY_BIRD_THRESHOLD = 30; // Days for early bird discount
+        final long SURGE_THRESHOLD = 7;       // Days for price increase
 
-        double T = 1 - ((double) daysLeft / maxDays);
-        double B = (double) event.getSeatsBooked() / event.getTotalCapacity();
-        double S = 1 - ((double) event.getAvailableSeats() / event.getTotalCapacity());
-        double D = 0.7; // Assume demand factor from external analytics
-
-        // ✅ FIX: BigDecimal Division
-        BigDecimal profitMarginRatio = BigDecimal.ONE;
-        if (product.getMaxProfitMargin().compareTo(BigDecimal.ZERO) > 0) {
-            profitMarginRatio = BigDecimal.ONE.subtract(
-                    product.getCurrentProfitMargin().divide(product.getMaxProfitMargin(), 2, RoundingMode.HALF_UP)
-            );
-        }
-        double P = profitMarginRatio.doubleValue();  // Convert to double for calculations
-
-        // 2. Apply Weighted Formula
-        double discountScore = (0.35 * T) + (0.25 * B) + (0.15 * S) + (0.15 * D) + (0.10 * P);
-
-        // 3. Determine Price Adjustment
-        double priceMultiplier;
-        if (discountScore >= 4.0 || event.getAvailableSeats() <= 5) {
-            priceMultiplier = 1.30; // 30% Surge Pricing
-        } else if (discountScore >= 3.0) {
-            priceMultiplier = 1.20; // 20% Surge Pricing
-        } else if (discountScore >= 2.0) {
-            priceMultiplier = 1.10; // 10% Surge Pricing
-        } else if (discountScore >= 1.0) {
-            priceMultiplier = 1.00; // No discount
-        } else {
-            priceMultiplier = 0.90; // 10% Discount
+        // Get linked EventProduct
+        EventProduct event = product.getEventProduct();
+        if (event == null) {
+            throw new IllegalArgumentException("No event associated with this product");
         }
 
-        // ✅ FIX: Edge Cases
-        if (daysLeft < 1 && event.getAvailableSeats() > 10) {
-            priceMultiplier = 0.50; // Last 2 hours, 50% Discount
-        } else if (daysLeft > 10 && event.getSeatsBooked() < (event.getTotalCapacity() * 0.2)) {
-            priceMultiplier = 0.60; // Low demand, flash discount
+        // Current time
+        LocalDateTime now = LocalDateTime.now();
+        long daysLeft = ChronoUnit.DAYS.between(now.toLocalDate(), event.getEventDate().toLocalDate());
+
+        // Base price and bounds
+        BigDecimal basePrice = product.getBasePrice();
+        BigDecimal minPrice = event.getMinTicketPrice();
+        BigDecimal maxPrice = event.getMaxTicketPrice();
+        BigDecimal price = basePrice;
+
+        // Debugging Log
+        System.out.println("DEBUG: Base Price = " + basePrice);
+        System.out.println("DEBUG: Days Left = " + daysLeft);
+
+        // ✅ Corrected Early Bird Discount (40% Discount)
+        if (daysLeft > EARLY_BIRD_THRESHOLD) {
+            price = basePrice.multiply(BigDecimal.valueOf(0.8)); // 40% discount (was 20% before)
+            System.out.println("DEBUG: Early Bird Discount Applied (40%)");
+        }
+        // ✅ Neutral zone (7-30 days): No Change
+        else if (daysLeft > SURGE_THRESHOLD) {
+            System.out.println("DEBUG: No Discount Applied (Neutral Zone)");
+        }
+        // ✅ Surge Pricing (< 7 days): Increase price from 20% to 40%
+        else {
+            double surgeFactor = 1.2 + (0.2 * (SURGE_THRESHOLD - daysLeft) / (double) SURGE_THRESHOLD);
+            price = basePrice.multiply(BigDecimal.valueOf(surgeFactor));
+            System.out.println("DEBUG: Surge Pricing Applied, Factor = " + surgeFactor);
         }
 
-        // 4. Calculate Final Price
-        BigDecimal basePrice = event.getMinTicketPrice();
-        BigDecimal finalPrice = basePrice.multiply(BigDecimal.valueOf(priceMultiplier));
+        // ✅ Ensure price stays within min & max bounds
+        price = price.max(minPrice).min(maxPrice);
 
-        return finalPrice.min(event.getMaxTicketPrice()); // Ensure max limit
+        // ✅ Debug Final Price
+        System.out.println("DEBUG: Final Price After Discount = " + price);
+
+        return price.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
+
+
 
 
 
