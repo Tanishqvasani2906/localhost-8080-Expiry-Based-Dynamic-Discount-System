@@ -28,16 +28,55 @@ const initialProducts = [
     expiryDate: new Date("2025-03-10"),
     image: "/api/placeholder/300/200",
   },
-  // Add more products as needed
+  {
+    id: 2,
+    name: "Organic Apples",
+    category: "Perishable Goods",
+    originalPrice: 5.99,
+    currentPrice: 3.49,
+    discountPercentage: 42,
+    expiryDate: new Date("2025-03-08"),
+    image: "/api/placeholder/300/200",
+  },
+  {
+    id: 3,
+    name: "Vitamin C Serum",
+    category: "Subscription Services",
+    originalPrice: 29.99,
+    currentPrice: 14.99,
+    discountPercentage: 50,
+    expiryDate: new Date("2025-06-15"),
+    image: "/api/placeholder/300/200",
+  },
+  {
+    id: 4,
+    name: "Pain Relief Tablets",
+    category: "Event-based Products",
+    originalPrice: 12.99,
+    currentPrice: 6.99,
+    discountPercentage: 46,
+    expiryDate: new Date("2025-12-20"),
+    image: "/api/placeholder/300/200",
+  },
+  {
+    id: 5,
+    name: "Winter Gloves",
+    category: "Seasonal Products",
+    originalPrice: 15.99,
+    currentPrice: 7.99,
+    discountPercentage: 50,
+    expiryDate: new Date("2025-01-15"),
+    image: "/api/placeholder/300/200",
+  },
 ];
 
 const LandingPage = () => {
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+  // Generate categories array from products
   const categories = [
-    { name: "All", icon: Box },
-    ...[...new Set(products.map((product) => product.category))].map(
+    ...Array.from(new Set(products.map((product) => product.category))).map(
       (category) => ({
         name: category,
         icon: categoryIcons[category] || Box,
@@ -80,33 +119,18 @@ const LandingPage = () => {
               <div
                 key={category.name}
                 onClick={() => setSelectedCategory(category.name)}
-                className={`
-                  cursor-pointer 
-                  rounded-xl 
-                  p-6 
-                  text-center 
-                  transition-all 
-                  duration-300 
-                  transform 
-                  hover:scale-105 
-                  shadow-lg 
-                  ${
-                    selectedCategory === category.name
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-blue-900 hover:bg-blue-100"
-                  }
-                `}
+                className={`cursor-pointer rounded-xl p-6 text-center transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                  selectedCategory === category.name
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-blue-900 hover:bg-blue-100"
+                }`}
               >
                 <CategoryIcon
-                  className={`
-                    mx-auto 
-                    mb-4 
-                    ${
-                      selectedCategory === category.name
-                        ? "text-white"
-                        : "text-blue-600"
-                    }
-                  `}
+                  className={`mx-auto mb-4 ${
+                    selectedCategory === category.name
+                      ? "text-white"
+                      : "text-blue-600"
+                  }`}
                   size={48}
                 />
                 <h3 className="font-semibold text-lg">{category.name}</h3>
