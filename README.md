@@ -1,5 +1,48 @@
 ﻿# DY_Patil_Project_Hackathon
 # localhost-8080-Expiry-Based-Dynamic-Discount-System
 
+# Expiry-Based Dynamic Discount System
 
-#Frontend code can be seen at branch /frontend & backend code can bes seen at branch /tanishq-backend
+## Problem Statement
+
+Pricing strategies for products and services often remain static, leading to inefficiencies in sales and revenue generation. Our goal is to implement a **dynamic discounting system** that adjusts prices based on time-sensitive factors, increasing sales efficiency and reducing wastage.
+
+## Our Approach
+
+We have designed a **multi-category dynamic pricing system** that applies different discounting strategies based on product type:
+
+1. **Perishable Goods** (Implemented ✅): Discounts increase as expiry approaches to prevent waste.
+2. **Event-Based Products** (Static Data 📊): Prices increase as event dates approach, with rare last-minute discounts.
+3. **Subscription Services** (Static Data 📊): Discounts based on user behavior, engagement, and renewal history.
+4. **Seasonal/Time-Limited Products** (Static Data 📊): Higher prices in peak season, clearance discounts post-season.
+
+## What We Have Implemented So Far
+
+✅ **[06/03/2025 | 12:00 AM]** Successfully implemented **dynamic pricing for perishable goods.**
+
+- Admin panel allows adding perishable products (restricted access).
+- Discounts are automatically calculated based on expiry date.
+- Hosted Backend & Frontend for live testing.
+
+🚧 **Other three categories are currently loading static data.**
+
+> 📌 **Live Demonstration Available:** If anyone wants to see a real-time demo of perishable products dynamic pricing, feel free to contact us.
+
+## Tech Stack
+
+- **Frontend:** React.js (Vite) (Hosted on Vercel)
+- **Backend:** Java Spring Boot with Hibernate ORM (Hosted on Render)
+- **Database:** PostgreSQL
+- **Containerization:** Docker
+
+## Deployment Links
+
+- **Frontend:** [Live Site](https://lh8080.vercel.app/)
+- **Backend:** [API Endpoint](https://localhost-8080-expiry-based-dynamic.onrender.com/)
+
+## Team
+
+**localhost:8080**
+
+We are continuously working on integrating other pricing models and optimizing the system for real-world applications. 🚀
+
