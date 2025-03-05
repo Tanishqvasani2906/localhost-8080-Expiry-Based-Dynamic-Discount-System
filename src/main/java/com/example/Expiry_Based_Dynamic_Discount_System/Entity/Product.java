@@ -29,13 +29,13 @@ public class Product {
     @Column(nullable = false)
     private ProductCategory productCategory;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = true, precision = 10, scale = 2)
     private BigDecimal basePrice;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private int totalStock;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private int currentStock;
 
     @Column(nullable = false)
