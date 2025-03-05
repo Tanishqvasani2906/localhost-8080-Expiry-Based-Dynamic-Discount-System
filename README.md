@@ -32,13 +32,13 @@ We have designed a **multi-category dynamic pricing system** that applies differ
 
 - **Frontend:** React.js (Vite) (Hosted on Vercel)
 - **Backend:** Java Spring Boot with Hibernate ORM (Hosted on Render)
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (Hosted on NeonDB)
 - **Containerization:** Docker
 
 ## Deployment Links
 
 - **Frontend:** [Live Site](https://lh8080.vercel.app/)
-- **Backend:** [API Endpoint](https://localhost-8080-expiry-based-dynamic.onrender.com/)
+- **Backend:** [API Endpoint](https://localhost-8080-expiry-based-dynamic.onrender.com/) (Restricted)
 
 ## Team
 
