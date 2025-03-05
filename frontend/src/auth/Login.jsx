@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const Login = ({ onClose, onSwitch }) => {
-  const [username, setUsername] = useState("");
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(""); // State to store error messages
 
   // Prevent background scrolling when the modal is open
   useEffect(() => {
@@ -12,14 +14,48 @@ const Login = ({ onClose, onSwitch }) => {
     };
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
+
+    if (!usernameOrEmail || !password) {
       alert("Please fill in all fields");
       return;
     }
-    console.log("Logging in with:", username, password);
-    onClose();
+
+    // Prepare login data
+    const loginData = { usernameOrEmail, password };
+
+    try {
+      // Send login request to backend
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/userlogin/login`,
+        loginData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Handle successful login
+      if (response.data) {
+        console.log("Login successful:", response.data);
+
+        // Store token in localStorage
+        if (response.data.token) {
+          localStorage.setItem("Token", response.data.token);
+          console.log("Token stored in localStorage");
+        }
+        onClose(); // Close modal on successful login
+        // Optionally, store token or handle state changes here
+      } else {
+        setError(response.data.message || "Invalid credentials");
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error("Error during login:", error);
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -37,17 +73,22 @@ const Login = ({ onClose, onSwitch }) => {
         <p className="text-center text-gray-600 mb-8 italic">
           Let’s Pick Up Where You Left Off – Login
         </p>
+        {error && (
+          <div className="mb-4 text-red-600 text-center">
+            <p>{error}</p>
+          </div>
+        )}
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <label className="block text-gray-700 mb-2 font-medium">
-              Username
+              Username or Email
             </label>
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={usernameOrEmail}
+              onChange={(e) => setUsernameOrEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-300 outline-none transition-transform transform hover:scale-105"
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
               required
             />
           </div>
