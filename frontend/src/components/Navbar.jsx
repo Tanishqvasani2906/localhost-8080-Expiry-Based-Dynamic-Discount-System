@@ -4,6 +4,7 @@ import { useTheme } from "../theme/DarkMode";
 import Login from "../auth/login";
 import Signup from "../auth/SignUp";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const ThemeSwitcher = ({ currentTheme, onThemeChange }) => {
   const themes = [
@@ -42,6 +43,7 @@ const Navbar = () => {
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
   const [isSignUpPopupOpen, setIsSignUpPopupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("Token"));
 
   const handleLoginPopup = () => {
     setIsLoginPopupOpen(!isLoginPopupOpen);
@@ -55,7 +57,35 @@ const Navbar = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log("Searching for:", searchQuery); // Replace with your search logic
+    console.log("Searching for:", searchQuery);
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Send a request to the backend to log out
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/userlogin/logout`, // Adjust the URL if needed
+        {},
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("Token")}`,
+          },
+        }
+      );
+
+      // Check if the response indicates a successful logout
+      if (response.status === 200) {
+        console.log("Successfully logged out");
+        // Remove token from localStorage
+        localStorage.removeItem("Token");
+        setIsLoggedIn(false); // Update state to reflect logged out status
+      } else {
+        console.error("Logout failed:", response.data);
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   return (
@@ -95,12 +125,21 @@ const Navbar = () => {
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
-              <button
-                onClick={handleLoginPopup}
-                className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
-              >
-                Login/Register
-              </button>
+              {localStorage.getItem("Token") ? (
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  onClick={handleLoginPopup}
+                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
+                >
+                  Login/Register
+                </button>
+              )}
               <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
             </div>
           </div>
