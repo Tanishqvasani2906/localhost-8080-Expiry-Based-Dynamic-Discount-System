@@ -9,9 +9,13 @@ import {
   Check,
   BarChart,
   ChevronRight,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { jwtDecode } from "jwt-decode";
+import UpdateProductForm from "../product/UpdateProductForm";
 
 const categoryIcons = {
   Perishable: Box,
@@ -25,8 +29,77 @@ const LandingPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isEditPopupOpen, setIsEditPopupOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    // Check if user is admin
+    if (localStorage.getItem("Token")) {
+      try {
+        const decodedToken = jwtDecode(localStorage.getItem("Token"));
+        if (decodedToken.roles === "ADMIN") {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+
+    // Function which call every second
+    const interval = setInterval(() => {
+      if (localStorage.getItem("Token")) {
+        try {
+          const decodedToken = jwtDecode(localStorage.getItem("Token"));
+          if (decodedToken.exp * 1000 < Date.now()) {
+            handleLogout();
+          } else {
+            if (decodedToken.roles === "ADMIN") {
+              setIsAdmin(true);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking token:", error);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("Token");
+    setIsAdmin(false);
+    navigate("/login");
+  };
+
+  const handleEditProduct = () => {
+    setIsEditPopupOpen(!isEditPopupOpen);
+    // fetchProducts();
+  };
+
+  // const handleDeleteProduct = async (productId) => {
+  //   if (window.confirm("Are you sure you want to delete this product?")) {
+  //     try {
+  //       await axios.delete(
+  //         `${
+  //           import.meta.env.VITE_BACKEND_URL
+  //         }/products/deleteProduct/${productId}`,
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${localStorage.getItem("Token")}`,
+  //           },
+  //         }
+  //       );
+  //       // Refresh products after deletion
+  //       fetchProducts();
+  //     } catch (error) {
+  //       console.error("Error deleting product:", error);
+  //       alert("Failed to delete product. Please try again.");
+  //     }
+  //   }
+  // };
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -51,6 +124,8 @@ const LandingPage = () => {
   useEffect(() => {
     if (localStorage.getItem("Token")) {
       fetchProducts();
+    } else {
+      setIsLoading(false); // Ensure loading state is false if not logged in
     }
   }, []);
 
@@ -79,16 +154,6 @@ const LandingPage = () => {
         .includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    navigate(searchQuery ? `?search=${searchQuery}` : "/");
-  };
-
-  const calculateDaysToExpiry = (expiryDate) => {
-    const today = new Date();
-    return Math.ceil((new Date(expiryDate) - today) / (1000 * 60 * 60 * 24));
-  };
 
   const discountStrategies = [
     {
@@ -234,90 +299,110 @@ const LandingPage = () => {
           </p>
         </motion.div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
-          </div>
-        ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <AnimatePresence>
-              {filteredProducts.map((product, index) => {
-                const daysToExpiry = calculateDaysToExpiry(product.expiryDate);
-                const urgencyClass =
-                  daysToExpiry <= 3
-                    ? "bg-red-600"
-                    : daysToExpiry <= 7
-                    ? "bg-orange-500"
-                    : daysToExpiry <= 14
-                    ? "bg-yellow-500"
-                    : "bg-green-500";
+        {localStorage.getItem("Token") ? (
+          isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+            </div>
+          ) : (
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <AnimatePresence>
+                {filteredProducts.map((product, index) => {
+                  return (
+                    <motion.article
+                      key={product.productId}
+                      className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-100"
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 * index, duration: 0.5 }}
+                      viewport={{ once: true }}
+                      whileHover={{
+                        y: -8,
+                        boxShadow:
+                          "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                    >
+                      <div className="relative h-72 overflow-hidden">
+                        <img
+                          src={product.image_url || "/placeholder.svg"}
+                          alt={product.productName}
+                          className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                        />
+                        {product.productCategory !== "EVENT" && (
+                          <div className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-full shadow-md">
+                            <span className="text-blue-600 font-bold">
+                              {Math.floor(
+                                ((product.basePrice - product.discountedPrice) *
+                                  100) /
+                                  product.basePrice
+                              )}
+                              % OFF
+                            </span>
+                          </div>
+                        )}
 
-                return (
-                  <motion.article
-                    key={product.productId}
-                    className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-100"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 * index, duration: 0.5 }}
-                    viewport={{ once: true }}
-                    whileHover={{
-                      y: -8,
-                      boxShadow:
-                        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                  >
-                    <div className="relative h-72 overflow-hidden">
-                      <img
-                        src={product.image_url || "/placeholder.svg"}
-                        alt={product.productName}
-                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                      />
-                      <div className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-full shadow-md">
-                        <span className="text-blue-600 font-bold">
-                          {((product.basePrice - product.discountedPrice) *
-                            100) /
-                            product.basePrice}
-                          % OFF
-                        </span>
+                        {/* Admin Controls */}
+                        {isAdmin && (
+                          <div className="absolute top-4 right-4 flex space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditProduct(product.productId);
+                                setSelectedProduct(product);
+                              }}
+                              className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md"
+                              aria-label="Edit product"
+                            >
+                              <Edit size={16} />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Tag size={16} className="text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">
-                          {product.productCategory}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-semibold mb-4 text-gray-800 line-clamp-1">
-                        {product.productName}
-                      </h3>
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <span className="text-gray-400 line-through">
-                            ₹{product.basePrice.toFixed(2)}
-                          </span>
-                          <span className="text-2xl font-bold text-indigo-600 ml-2">
-                            ₹{product.discountedPrice.toFixed(2)}
+                      <div className="p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Tag size={16} className="text-blue-600" />
+                          <span className="text-sm font-medium text-blue-600">
+                            {product.productCategory}
                           </span>
                         </div>
+                        <h3 className="text-xl font-semibold mb-4 text-gray-800 line-clamp-1">
+                          {product.productName}
+                        </h3>
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            {product.productCategory !== "EVENT" && (
+                              <span className="text-gray-400 line-through">
+                                ₹{product.basePrice.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-2xl font-bold text-indigo-600 ml-2">
+                              ₹{product.discountedPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </motion.article>
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
+                    </motion.article>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+          )
+        ) : (
+          <div className="text-center">
+            <p className="bg-red-100 text-red-800 border border-red-300 rounded-lg p-4 mt-5 text-xl font-semibold">
+              Please login to view products.
+            </p>
+          </div>
         )}
       </div>
-
       {/* How It Works */}
       <div id="how-it-works" className="container mx-auto px-4 py-16">
         <motion.div
@@ -413,6 +498,14 @@ const LandingPage = () => {
           <p className="text-blue-600 font-semibold">Team LOCALHOST:8080</p>
         </div>
       </motion.div>
+
+      {isEditPopupOpen && (
+        <UpdateProductForm
+          onClose={handleEditProduct}
+          product={selectedProduct}
+          fetchProducts={fetchProducts}
+        />
+      )}
     </div>
   );
 };

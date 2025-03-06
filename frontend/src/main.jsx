@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { SnackbarProvider } from "notistack";
 import LandingPage from "./components/LandingPage.jsx";
 import AddProduct from "./product/AddProduct.jsx";
+import UpdateProductForm from "./product/UpdateProductForm.jsx";
 
 const withSnackbar = (Component) => (
   <SnackbarProvider maxSnack={3}>

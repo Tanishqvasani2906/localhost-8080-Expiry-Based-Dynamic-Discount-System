@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import AddPerishableProduct from "./AddPerishableProduct";
 import AddEventProduct from "./AddEventProduct";
+import AddSubscriptionProduct from "./AddSubscriptionProduct";
 
 const AddProduct = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -60,69 +61,7 @@ const AddProduct = () => {
 
           {/* Subscription Form */}
           {selectedCategory === "subscription" && (
-            <form>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Subscription Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Billing Cycle
-                    </label>
-                    <select className="w-full p-2 border rounded-md">
-                      <option>Select billing cycle</option>
-                      <option>Monthly</option>
-                      <option>Quarterly</option>
-                      <option>Semi-annually</option>
-                      <option>Annually</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Price
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Free Trial Period (days)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Auto-renewal
-                  </label>
-                  <div className="flex items-center">
-                    <input type="checkbox" id="autoRenewal" className="mr-2" />
-                    <label htmlFor="autoRenewal">Enable auto-renewal</label>
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
+            <AddSubscriptionProduct category={selectedCategory} />
           )}
         </div>
       )}
