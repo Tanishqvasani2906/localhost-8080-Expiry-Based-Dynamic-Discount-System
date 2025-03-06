@@ -60,7 +60,7 @@ public class Product {
 
     private PerishableGood perishableGood;
 
-    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "product")
     private EventProduct eventProduct;
 
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL)

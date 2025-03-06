@@ -5,6 +5,7 @@ import com.example.Expiry_Based_Dynamic_Discount_System.Entity.Product;
 import com.example.Expiry_Based_Dynamic_Discount_System.Service.DiscountService;
 import com.example.Expiry_Based_Dynamic_Discount_System.Service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -95,14 +96,19 @@ public class ProductController {
     // Update a product (Only Admin)
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/updateByProductId/{productId}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String productId, @RequestBody Product updatedProduct) {
+    public ResponseEntity<?> updateProduct(@PathVariable String productId, @RequestBody Product updatedProduct) {
         try {
+            if (updatedProduct.getProductCategory() == null) {
+                return ResponseEntity.badRequest().body("Product category is required!");
+            }
+
             Product updated = productService.updateProduct(productId, updatedProduct);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
         }
     }
+
 
     // Delete a product (Only Admin)
     @PreAuthorize("hasRole('ADMIN')")
