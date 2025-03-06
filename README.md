@@ -1,3 +1,5 @@
+#Frontned code can be seen in "frontend branch"
+#Backend code can be seen in "tanishq-backend" branch
 # localhost-8080
 
 # Expiry-Based Dynamic Discount System
@@ -22,7 +24,7 @@ We have designed a **multi-category dynamic pricing system** that applies differ
 - Discounts are automatically calculated based on expiry date.
 - Hosted Backend & Frontend for live testing.
 
-🚧 **Other three categories are currently loading static data.**
+✅ **[06/03/2025 | 10:25 AM]** Successfully implemented **dynamic pricing for event based products and subscription based products.**
 
 > 📌 **Live Demonstration Available:** If anyone wants to see a real-time demo of perishable products dynamic pricing, feel free to contact us.
 
@@ -42,5 +44,4 @@ We have designed a **multi-category dynamic pricing system** that applies differ
 
 **localhost:8080**
 
-We are continuously working on integrating other pricing models and optimizing the system for real-world applications. 🚀
 
