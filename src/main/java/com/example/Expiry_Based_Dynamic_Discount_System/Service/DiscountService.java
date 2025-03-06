@@ -62,7 +62,7 @@ public class DiscountService {
             discountHistoryRepository.save(discountHistory);
         }
 
-        // ✅ Debug log to confirm correct price
+        //  Debug log to confirm correct price
         System.out.println("DEBUG: Final Discounted Price Being Saved = " + discountedPrice);
 
         return discountedPrice;
@@ -123,7 +123,7 @@ public class DiscountService {
         PerishableGood perishableGood = product.getPerishableGood();
         if (perishableGood == null) return BigDecimal.ZERO;
 
-        // ✅ Expiry Time Score
+        //  Expiry Time Score
         long daysToExpiry = java.time.temporal.ChronoUnit.DAYS.between(
                 LocalDate.now(), perishableGood.getExpiryDate()
         );
@@ -132,13 +132,13 @@ public class DiscountService {
                         .divide(new BigDecimal(perishableGood.getMaxShelfLife()), 2, BigDecimal.ROUND_HALF_UP)
         );
 
-        // ✅ Demand Trend Score
+        //  Demand Trend Score
         BigDecimal demandTrendScore = BigDecimal.ONE.subtract(
                 new BigDecimal(String.valueOf(perishableGood.getCurrentDemandLevel()))
                         .divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP)
         );
 
-        // ✅ Stock Clearance Factor (SCF)
+        //  Stock Clearance Factor (SCF)
         BigDecimal scf = BigDecimal.ZERO;
         if (daysToExpiry > 0 && perishableGood.getCurrentDailySellingRate().compareTo(BigDecimal.ZERO) > 0) {
             scf = new BigDecimal(product.getCurrentStock()).divide(
@@ -148,7 +148,7 @@ public class DiscountService {
         }
         BigDecimal scfNormalized = scf.divide(new BigDecimal("5"), 2, BigDecimal.ROUND_HALF_UP);
 
-        // 🎯 Final Discount Score Calculation (Adjusted Weights)
+        //  Final Discount Score Calculation (Adjusted Weights)
         BigDecimal discountScore = expiryTimeScore.multiply(new BigDecimal("0.4"))
                 .add(demandTrendScore.multiply(new BigDecimal("0.3")))
                 .add(scfNormalized.multiply(new BigDecimal("0.3")));
@@ -181,26 +181,24 @@ public class DiscountService {
         System.out.println("DEBUG: Base Price = " + basePrice);
         System.out.println("DEBUG: Days Left = " + daysLeft);
 
-        // ✅ Corrected Early Bird Discount (40% Discount)
+        //  Corrected Early Bird Discount (40% Discount)
         if (daysLeft > EARLY_BIRD_THRESHOLD) {
             price = basePrice.multiply(BigDecimal.valueOf(0.8)); // 40% discount (was 20% before)
             System.out.println("DEBUG: Early Bird Discount Applied (40%)");
         }
-        // ✅ Neutral zone (7-30 days): No Change
+        //  Neutral zone (7-30 days): No Change
         else if (daysLeft > SURGE_THRESHOLD) {
             System.out.println("DEBUG: No Discount Applied (Neutral Zone)");
         }
-        // ✅ Surge Pricing (< 7 days): Increase price from 20% to 40%
+        //  Surge Pricing (< 7 days): Increase price from 20% to 40%
         else {
             double surgeFactor = 1.2 + (0.2 * (SURGE_THRESHOLD - daysLeft) / (double) SURGE_THRESHOLD);
             price = basePrice.multiply(BigDecimal.valueOf(surgeFactor));
             System.out.println("DEBUG: Surge Pricing Applied, Factor = " + surgeFactor);
         }
 
-        // ✅ Ensure price stays within min & max bounds
         price = price.max(minPrice).min(maxPrice);
 
-        // ✅ Debug Final Price
         System.out.println("DEBUG: Final Price After Discount = " + price);
 
         return price.setScale(2, BigDecimal.ROUND_HALF_UP);
@@ -211,7 +209,39 @@ public class DiscountService {
 
 
     private BigDecimal calculateSubscriptionDiscount(Product product) {
-        return BigDecimal.valueOf(1.5);
+        if (product == null || product.getProductCategory() == null || product.getProductCategory() != ProductCategory.SUBSCRIPTION) {
+            return BigDecimal.ZERO; // No discount for non-subscription products
+        }
+
+        SubscriptionService subscription = product.getSubscriptionService();
+        if (subscription == null) {
+            return BigDecimal.ZERO; // No discount if no subscription details available
+        }
+
+        double discount = 0.0;
+
+        // Base discount based on renewal rate
+        if (subscription.getRenewalRate() > 0.7) {
+            discount += 5.0;
+        } else if (subscription.getRenewalRate() > 0.5) {
+            discount += 10.0;
+        } else {
+            discount += 15.0;
+        }
+
+        // Additional discount if many subscribers have expired
+        int daysSinceExpiry = subscription.getStandardDurationDays() + subscription.getGracePeriodDays() - subscription.getActiveSubscribers();
+        if (daysSinceExpiry > subscription.getGracePeriodDays()) {
+            discount += 10.0;
+        }
+
+        // Encourage renewals for services with fewer active subscribers
+        if (subscription.getActiveSubscribers() < (subscription.getTotalSubscribers() * 0.3)) {
+            discount += 10.0;
+        }
+
+        // Ensuring discount doesn't exceed 50%
+        return BigDecimal.valueOf(Math.min(discount, 50.0));
     }
 
     private BigDecimal calculateSeasonalDiscount(Product product) {
