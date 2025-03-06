@@ -208,40 +208,215 @@ public class DiscountService {
 
 
 
-    private BigDecimal calculateSubscriptionDiscount(Product product) {
-        if (product == null || product.getProductCategory() == null || product.getProductCategory() != ProductCategory.SUBSCRIPTION) {
-            return BigDecimal.ZERO; // No discount for non-subscription products
+//    private BigDecimal calculateSubscriptionDiscount(Product product) {
+//        if (product == null || product.getProductCategory() == null || product.getProductCategory() != ProductCategory.SUBSCRIPTION) {
+//            return BigDecimal.ZERO; // No discount for non-subscription products
+//        }
+//
+//        SubscriptionService subscription = product.getSubscriptionService();
+//        if (subscription == null) {
+//            return BigDecimal.ZERO; // No discount if no subscription details available
+//        }
+//
+//        double discount = 0.0;
+//
+//        // Base discount based on renewal rate
+//        if (subscription.getRenewalRate() > 0.7) {
+//            discount += 5.0;
+//        } else if (subscription.getRenewalRate() > 0.5) {
+//            discount += 10.0;
+//        } else {
+//            discount += 15.0;
+//        }
+//
+//        // Additional discount if many subscribers have expired
+//        int daysSinceExpiry = subscription.getStandardDurationDays() + subscription.getGracePeriodDays() - subscription.getActiveSubscribers();
+//        if (daysSinceExpiry > subscription.getGracePeriodDays()) {
+//            discount += 10.0;
+//        }
+//
+//        // Encourage renewals for services with fewer active subscribers
+//        if (subscription.getActiveSubscribers() < (subscription.getTotalSubscribers() * 0.3)) {
+//            discount += 10.0;
+//        }
+//
+//        // Ensuring discount doesn't exceed 50%
+//        return BigDecimal.valueOf(Math.min(discount, 50.0));
+//    }
+private BigDecimal calculateSubscriptionDiscount(Product product) {
+    if (product == null || product.getProductCategory() == null || product.getProductCategory() != ProductCategory.SUBSCRIPTION) {
+        return BigDecimal.ZERO; // No discount for non-subscription products
+    }
+
+    SubscriptionService subscription = product.getSubscriptionService();
+    if (subscription == null) {
+        return BigDecimal.ZERO; // No discount if no subscription details available
+    }
+
+    // User behavior parameters (normalized 0-1)
+    double renewalProbability = calculateRenewalProbability(subscription);
+    double engagementLevel = calculateEngagementLevel(subscription);
+    double timeSinceExpiry = calculateTimeSinceExpiry(subscription);
+    double totalRenewalsNormalized = normalizeRenewals(subscription);
+    double discountSensitivity = calculateDiscountSensitivity(subscription);
+
+    // Determine user segment for logging and future feature expansion
+    String userSegment = determineUserSegment(renewalProbability, engagementLevel,
+            totalRenewalsNormalized, discountSensitivity);
+
+    // Final discount score calculation using the formula from the design
+    // Discount Score = (1-R) × (T) × (w1×E + w2×D)
+    double w1 = 0.6; // Weight for engagement
+    double w2 = 0.4; // Weight for discount sensitivity
+
+    double discountScore = (1 - renewalProbability) * timeSinceExpiry *
+            (w1 * engagementLevel + w2 * discountSensitivity);
+
+    // Map discount score to actual discount percentage and add bonus days
+    double discountPercentage = mapScoreToDiscount(discountScore, timeSinceExpiry);
+    int bonusDays = determineBonusDays(timeSinceExpiry, userSegment);
+
+    // Log the calculation for analytics and debugging
+    logDiscountCalculation(subscription, renewalProbability, engagementLevel,
+            timeSinceExpiry, discountSensitivity, discountScore,
+            discountPercentage, bonusDays, userSegment);
+
+    return BigDecimal.valueOf(discountPercentage);
+}
+
+    // Calculate renewal probability (R) based on the formula: R = 0.3×N + 0.4×E + 0.3×D
+    private double calculateRenewalProbability(SubscriptionService subscription) {
+        double totalRenewalsNormalized = normalizeRenewals(subscription);
+        double engagementLevel = calculateEngagementLevel(subscription);
+        double discountSensitivity = calculateDiscountSensitivity(subscription);
+
+        return 0.3 * totalRenewalsNormalized + 0.4 * engagementLevel + 0.3 * discountSensitivity;
+    }
+
+    // Normalize the total renewals to 0-1 range
+    private double normalizeRenewals(SubscriptionService subscription) {
+        // For simplicity, assume a max of 24 renewals (2 years for monthly subscription)
+        // This value should be configurable based on business expectations
+        int maxRenewals = 24;
+        double averageSubscriptionLength = subscription.getAverageSubscriptionLength();
+        int standardDuration = subscription.getStandardDurationDays();
+
+        // Convert average subscription length to number of renewals
+        double estimatedRenewals = standardDuration > 0 ?
+                Math.max(0, averageSubscriptionLength / standardDuration - 1) : 0;
+
+        return Math.min(1.0, estimatedRenewals / maxRenewals);
+    }
+
+    // Calculate engagement level (E) normalized to 0-1
+    private double calculateEngagementLevel(SubscriptionService subscription) {
+        // We don't have actual engagement metrics in the current model
+        // Using active subscribers percentage as a proxy for engagement
+        double activeRate = subscription.getTotalSubscribers() > 0 ?
+                (double) subscription.getActiveSubscribers() / subscription.getTotalSubscribers() : 0;
+
+        // Invert since lower active rate suggests lower engagement
+        return Math.max(0, Math.min(1, activeRate));
+    }
+
+    // Calculate discount sensitivity (D) - this represents how likely users are to respond to discounts
+    private double calculateDiscountSensitivity(SubscriptionService subscription) {
+        // Using renewal rate as an inverse proxy for discount sensitivity
+        // Lower renewal rates suggest higher sensitivity to discounts
+        return Math.max(0, Math.min(1, 1 - subscription.getRenewalRate()));
+    }
+
+    // Calculate time since expiry (T) normalized to 0-1 based on grace period
+    private double calculateTimeSinceExpiry(SubscriptionService subscription) {
+        // We don't have individual subscription data with expiry dates
+        // Using a proxy based on inactive subscribers percentage
+        double inactiveRate = subscription.getTotalSubscribers() > 0 ?
+                1 - ((double) subscription.getActiveSubscribers() / subscription.getTotalSubscribers()) : 0;
+
+        // Scale to represent days passed in grace period (0-1)
+        // 0 = just expired, 1 = at or beyond max grace period
+        return Math.max(0, Math.min(1, inactiveRate));
+    }
+
+    // Map discount score to actual discount percentage
+    private double mapScoreToDiscount(double discountScore, double timeSinceExpiry) {
+        // Implement the tiered discount structure
+        if (timeSinceExpiry < 0.15) { // 0-1 days for a 7-day grace period
+            return 0.0; // No discount, just wait
+        } else if (timeSinceExpiry < 0.3) { // 2 days for a 7-day grace period
+            return discountScore < 0.4 ? 10.0 : 0.0;
+        } else if (timeSinceExpiry < 0.7) { // 3-5 days for a 7-day grace period
+            return discountScore < 0.6 ? 20.0 : 0.0;
+        } else if (timeSinceExpiry < 1.0) { // 6-7 days for a 7-day grace period
+            return discountScore < 0.8 ? 40.0 : 0.0;
+        } else { // 8+ days (beyond grace period)
+            return 50.0; // Flash discount
         }
+    }
 
-        SubscriptionService subscription = product.getSubscriptionService();
-        if (subscription == null) {
-            return BigDecimal.ZERO; // No discount if no subscription details available
-        }
-
-        double discount = 0.0;
-
-        // Base discount based on renewal rate
-        if (subscription.getRenewalRate() > 0.7) {
-            discount += 5.0;
-        } else if (subscription.getRenewalRate() > 0.5) {
-            discount += 10.0;
+    // Determine number of bonus days to add
+    private int determineBonusDays(double timeSinceExpiry, String userSegment) {
+        if (timeSinceExpiry < 0.15) {
+            return 0;
+        } else if (timeSinceExpiry < 0.3) {
+            return 2; // 2 bonus days
+        } else if (timeSinceExpiry < 0.7) {
+            return 3; // 3 bonus days
+        } else if (timeSinceExpiry < 1.0) {
+            return 5; // 5 bonus days
         } else {
-            discount += 15.0;
+            return 7; // 7 bonus days
         }
+    }
 
-        // Additional discount if many subscribers have expired
-        int daysSinceExpiry = subscription.getStandardDurationDays() + subscription.getGracePeriodDays() - subscription.getActiveSubscribers();
-        if (daysSinceExpiry > subscription.getGracePeriodDays()) {
-            discount += 10.0;
+    // Determine user segment based on behavior metrics
+    private String determineUserSegment(double renewalProbability, double engagementLevel,
+                                        double totalRenewalsNormalized, double discountSensitivity) {
+        // Loyal Users: Regular renewals without offers
+        if (renewalProbability > 0.8 && totalRenewalsNormalized > 0.5) {
+            return "Loyal User";
         }
-
-        // Encourage renewals for services with fewer active subscribers
-        if (subscription.getActiveSubscribers() < (subscription.getTotalSubscribers() * 0.3)) {
-            discount += 10.0;
+        // Discount Hunters: Renew only during discounts
+        else if (discountSensitivity > 0.7) {
+            return "Discount Hunter";
         }
+        // High Engagement Users: Active but not renewing
+        else if (engagementLevel > 0.7 && renewalProbability < 0.5) {
+            return "High Engagement User";
+        }
+        // Inactive Users: Rarely used service
+        else if (engagementLevel < 0.3) {
+            return "Inactive User";
+        }
+        // New Users: Just 1 renewal
+        else if (totalRenewalsNormalized < 0.1) {
+            return "New User";
+        }
+        else {
+            return "Standard User";
+        }
+    }
 
-        // Ensuring discount doesn't exceed 50%
-        return BigDecimal.valueOf(Math.min(discount, 50.0));
+    // Log the calculation details for analytics and debugging
+    private void logDiscountCalculation(SubscriptionService subscription, double renewalProbability,
+                                        double engagementLevel, double timeSinceExpiry,
+                                        double discountSensitivity, double discountScore,
+                                        double discountPercentage, int bonusDays, String userSegment) {
+
+        // Create log entity or just log to console for now
+        System.out.println("==== Subscription Discount Calculation ====");
+        System.out.println("Subscription ID: " + subscription.getSubscription_id());
+        System.out.println("User Segment: " + userSegment);
+        System.out.println("Renewal Probability (R): " + renewalProbability);
+        System.out.println("Engagement Level (E): " + engagementLevel);
+        System.out.println("Time Since Expiry (T): " + timeSinceExpiry);
+        System.out.println("Discount Sensitivity (D): " + discountSensitivity);
+        System.out.println("Discount Score: " + discountScore);
+        System.out.println("Final Discount: " + discountPercentage + "%");
+        System.out.println("Bonus Days: " + bonusDays);
+        System.out.println("=========================================");
+
+        // Here you could also save this to your discountCalculationLogRepository
     }
 
     private BigDecimal calculateSeasonalDiscount(Product product) {
