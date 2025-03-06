@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AddPerishableProduct from "./AddPerishableProduct";
 import AddEventProduct from "./AddEventProduct";
 import AddSubscriptionProduct from "./AddSubscriptionProduct";
+import { jwtDecode } from "jwt-decode";
+
 
 const AddProduct = () => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("");
 
   // Updated categories as requested
@@ -12,6 +15,16 @@ const AddProduct = () => {
     { id: "event", name: "Event" },
     { id: "subscription", name: "Subscription" },
   ];
+
+  useEffect(() => {
+    if (localStorage.getItem("Token")) {
+      const decodedToken = jwtDecode(localStorage.getItem("Token"));
+
+      if (decodedToken.roles !== "ADMIN") {
+        navigate("/");
+      }
+    }
+  }, []);
 
   // Handle category selection
   const handleCategorySelect = (categoryId) => {
