@@ -3,6 +3,7 @@ package com.example.Expiry_Based_Dynamic_Discount_System.Service;
 import com.example.Expiry_Based_Dynamic_Discount_System.Entity.SubscriptionService;
 
 import com.example.Expiry_Based_Dynamic_Discount_System.Repository.SubscriptionServiceRepository;
+import jakarta.persistence.LockModeType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,4 +35,5 @@ public class SubscriptionServiceService {
     public void deleteSubscription(String id) {
         subscriptionRepository.deleteById(id);
     }
+
 }

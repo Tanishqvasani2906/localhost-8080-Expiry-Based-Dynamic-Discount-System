@@ -113,13 +113,37 @@ public class ProductService {
     }
 
 
-
-
-
     // Delete a product
+    @Transactional
     public void deleteProduct(String productId) {
+        // Fetch the Product
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+
+        // Delete associated entities based on Product Category
+        switch (product.getProductCategory()) {
+            case PERISHABLE:
+                perishableGoodRepository.deleteByProductId(productId);
+                break;
+
+            case EVENT:
+                eventProductRepository.deleteByProductId(productId);
+                break;
+
+            case SUBSCRIPTION:
+                subscriptionServiceRepository.deleteByProductId(productId);
+                break;
+
+            // Add other product categories here if needed
+            default:
+                throw new RuntimeException("Unsupported product category: " + product.getProductCategory());
+        }
+
+        // Finally, delete the Product
         productRepository.deleteById(productId);
     }
+
+
 
     public Optional<DiscountHistory> getLatestDiscount(String productId) {
         List<DiscountHistory> discountList = discountHistoryRepository.findLatestDiscountByProductId(productId);

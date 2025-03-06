@@ -1,7 +1,9 @@
 package com.example.Expiry_Based_Dynamic_Discount_System.Controller;
 
-import com.example.Expiry_Based_Dynamic_Discount_System.Entity.DiscountHistory;
-import com.example.Expiry_Based_Dynamic_Discount_System.Entity.Product;
+import com.example.Expiry_Based_Dynamic_Discount_System.Entity.*;
+import com.example.Expiry_Based_Dynamic_Discount_System.Repository.EventProductRepository;
+import com.example.Expiry_Based_Dynamic_Discount_System.Repository.PerishableGoodRepository;
+import com.example.Expiry_Based_Dynamic_Discount_System.Repository.SubscriptionServiceRepository;
 import com.example.Expiry_Based_Dynamic_Discount_System.Service.DiscountService;
 import com.example.Expiry_Based_Dynamic_Discount_System.Service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/products")
@@ -24,6 +27,12 @@ public class ProductController {
     private ProductService productService;
     @Autowired
     private DiscountService discountService;
+    @Autowired
+    private PerishableGoodRepository perishableGoodRepository;
+    @Autowired
+    private SubscriptionServiceRepository subscriptionServiceRepository;
+    @Autowired
+    private EventProductRepository eventProductRepository;
 
     // Create a new product (Only Admin)
     @PreAuthorize("hasRole('ADMIN')")
@@ -42,12 +51,14 @@ public class ProductController {
 
     @GetMapping("/getAllProducts")
     public ResponseEntity<List<Map<String, Object>>> getAllProducts() {
+        // Fetch all products
         List<Product> allProducts = productService.getAllProducts();
 
+        // Merge product and discount details into the response
         List<Map<String, Object>> mergedResults = allProducts.stream().map(product -> {
             BigDecimal discountedPrice = discountService.calculateAndApplyDiscount(product);
 
-            // 🔹 Merging Product and Discount Data into JSON Response
+            // Prepare the response map
             Map<String, Object> response = new HashMap<>();
             response.put("productId", product.getProduct_id());
             response.put("productName", product.getName());
@@ -60,16 +71,55 @@ public class ProductController {
             response.put("image_url", product.getImage_url());
             response.put("createdAt", product.getCreatedAt());
             response.put("updatedAt", product.getUpdatedAt());
+            response.put("maximumProfitMargin", product.getMaxProfitMargin());
 
-            // 🔹 Adding Discount Details
+            // Adding Discount Details
             response.put("discountedPrice", discountedPrice);
             response.put("discountPercentage", product.getCurrentProfitMargin());
 
+            // Check if the product is of category PERISHABLE and add perishable specific fields
+            if (product.getProductCategory() == ProductCategory.PERISHABLE) {
+                // Fetch the PerishableGood details (Optional)
+                Optional<PerishableGood> perishableGoodOptional = perishableGoodRepository.findByProductId(product.getProduct_id());
+
+                // Check if the PerishableGood exists
+                perishableGoodOptional.ifPresent(perishableGood -> {
+                    // Add expiryDate and manufacturingDate to the response
+                    response.put("expiryDate", perishableGood.getExpiryDate().toString());  // Convert to string if necessary
+                    response.put("manufacturingDate", perishableGood.getManufacturingDate().toString());  // Convert to string if necessary
+                });
+            }
+            if (product.getProductCategory() == ProductCategory.SUBSCRIPTION) {
+                // Fetch the SubscriptionService details (Optional)
+                Optional<SubscriptionService> subscriptionServiceOptional = subscriptionServiceRepository.findByProductId(product.getProduct_id());
+
+                // Check if the SubscriptionService exists
+                subscriptionServiceOptional.ifPresent(subscriptionService -> {
+                    // Add renewalRate, totalSubscribers, activeSubscribers to the response
+                    response.put("renewalRate", subscriptionService.getRenewalRate());
+                    response.put("totalSubscribers", subscriptionService.getTotalSubscribers());
+                    response.put("activeSubscribers", subscriptionService.getActiveSubscribers());
+                });
+            }
+
+            // Check if the product is of category EVENT and add event specific fields
+            if (product.getProductCategory() == ProductCategory.EVENT) {
+                // Fetch the EventProduct details (Optional)
+                Optional<EventProduct> eventProductOptional = eventProductRepository.findByProductId(product.getProduct_id());
+
+                // Check if the EventProduct exists
+                eventProductOptional.ifPresent(eventProduct -> {
+                    // Add eventDate and eventDetails to the response
+                    response.put("eventDate", eventProduct.getEventDate().toString());
+                });
+            }
+
             return response;
-        }).toList();
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(mergedResults);
     }
+
 
     @GetMapping("/getByProductId/{productId}")
     public ResponseEntity<Map<String, Object>> getProductById(@PathVariable String productId) {

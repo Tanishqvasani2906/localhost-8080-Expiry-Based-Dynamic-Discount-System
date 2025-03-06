@@ -33,6 +33,7 @@ public class SubscriptionService {
 
     private int averageSubscriptionLength = 0;
 
+
     public int getActiveSubscribers() {
         return activeSubscribers;
     }
