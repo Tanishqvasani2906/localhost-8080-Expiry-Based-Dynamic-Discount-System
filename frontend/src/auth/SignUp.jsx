@@ -32,7 +32,7 @@ const Signup = ({ onClose, onSwitch }) => {
     try {
       // Send login request to backend
       const response = await axios.post(
-        ${import.meta.env.VITE_BACKEND_URL}/userlogin/login,
+        `${import.meta.env.VITE_BACKEND_URL}/userlogin/login`,
         loginData,
         {
           headers: {
@@ -83,7 +83,7 @@ const Signup = ({ onClose, onSwitch }) => {
 
       // Send the signup request to the backend
       const response = await axios.post(
-        ${import.meta.env.VITE_BACKEND_URL}/userlogin/register,
+        `${import.meta.env.VITE_BACKEND_URL}/userlogin/register`,
         registerData,
         {
           headers: {

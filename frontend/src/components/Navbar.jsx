@@ -1,48 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
-import { useTheme } from "../theme/DarkMode";
 import Login from "../auth/Login";
 import Signup from "../auth/SignUp";
-import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-
-const ThemeSwitcher = ({ currentTheme, onThemeChange }) => {
-  const themes = [
-    { name: "light", icon: Sun },
-    { name: "dark", icon: Moon },
-    { name: "system", icon: Monitor },
-  ];
-
-  const currentThemeData = themes.find((theme) => theme.name === currentTheme);
-
-  const getNextTheme = () => {
-    const currentIndex = themes.findIndex(
-      (theme) => theme.name === currentTheme
-    );
-    return themes[(currentIndex + 1) % themes.length].name;
-  };
-
-  return (
-    currentThemeData && (
-      <button
-        onClick={() => onThemeChange(getNextTheme())}
-        className="relative p-2.5 rounded-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg text-white flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 hover:shadow-xl focus:ring-3 focus:ring-blue-300 dark:focus:ring-blue-800 group"
-        title={`${
-          currentThemeData.name.charAt(0).toUpperCase() +
-          currentThemeData.name.slice(1)
-        } mode`}
-      >
-        <currentThemeData.icon className="w-6 h-6" />
-      </button>
-    )
-  );
-};
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setTheme] = useTheme();
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
   const [isSignUpPopupOpen, setIsSignUpPopupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(
@@ -59,12 +24,12 @@ const Navbar = () => {
   useEffect(() => {
     //function which call every second
     const interval = setInterval(() => {
-      if (localStorage.getItem("Token")) {
+      if (localStorage.getItem("Token") && !isAdmin) {
         const decodedToken = jwtDecode(localStorage.getItem("Token"));
         if (decodedToken.exp * 1000 < Date.now()) {
           handleLogout();
         } else {
-          if (decodedToken.role === "ADMIN") {
+          if (decodedToken.roles === "ADMIN") {
             setIsAdmin(true);
           }
         }
@@ -129,7 +94,7 @@ const Navbar = () => {
 
   return (
     <div className="mb-12 z-50">
-      <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md">
+      <nav className="fixed top-0 left-0 right-0 bg-white shadow-md">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Left Side Logo */}
@@ -138,10 +103,8 @@ const Navbar = () => {
                 onClick={() => redirect("/")}
                 className="flex items-center text-4xl font-bold cursor-pointer"
               >
-                <span className="relative text-blue-700 dark:text-blue-500 text-5xl">
-                  L
-                </span>
-                <span className="relative dark:text-white">H8080</span>
+                <span className="relative text-blue-700 text-5xl">L</span>
+                <span className="relative">H8080</span>
               </button>
             </div>
 
@@ -165,36 +128,35 @@ const Navbar = () => {
               </button>
             </form>
 
-            {/* Navigation Links */}
-            {localStorage.getItem("Token") && isAdmin && (
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => redirect("addProducts")}
-                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
-                >
-                  Add Products
-                </button>
-              </div>
-            )}
-
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
+              {/* Navigation Links */}
+              {localStorage.getItem("Token") && isAdmin && (
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => redirect("addProduct")}
+                    className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md"
+                  >
+                    Add Products
+                  </button>
+                </div>
+              )}
+
               {localStorage.getItem("Token") ? (
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
+                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md"
                 >
                   Logout
                 </button>
               ) : (
                 <button
                   onClick={handleLoginPopup}
-                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md dark:bg-blue-500 dark:hover:bg-blue-600"
+                  className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md"
                 >
                   Login/Register
                 </button>
               )}
-              <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
             </div>
           </div>
         </div>
