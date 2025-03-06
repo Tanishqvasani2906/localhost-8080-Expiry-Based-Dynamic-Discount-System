@@ -13,7 +13,6 @@ We have designed a **multi-category dynamic pricing system** that applies differ
 1. **Perishable Goods** (Implemented ✅): Discounts increase as expiry approaches to prevent waste.
 2. **Event-Based Products** (Static Data 📊): Prices increase as event dates approach, with rare last-minute discounts.
 3. **Subscription Services** (Static Data 📊): Discounts based on user behavior, engagement, and renewal history.
-4. **Seasonal/Time-Limited Products** (Static Data 📊): Higher prices in peak season, clearance discounts post-season.
 
 ## What We Have Implemented So Far
 
